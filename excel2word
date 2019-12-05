@@ -1,0 +1,47 @@
+Sub ExcelTableToWord()
+    Dim WdApp As Object
+    Dim objTable As Object
+    Dim objDoc As Object
+    Dim strPath As String
+    Dim arr As Variant, brr As Variant
+    Dim k As Long, x As Long, y As Long
+    Dim i As Long, j As Long, Clny As Long
+    On Error Resume Next
+    Set WdApp = CreateObject("Word.Application")
+    With Application.FileDialog(msoFileDialogFilePicker)
+        .Filters.Add "Word文件", "*.doc*", 1
+        '只显示word文件
+        .AllowMultiSelect = False
+        '禁止多选文件
+        If .Show Then strPath = .SelectedItems(1) Else Exit Sub
+    End With
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    arr = [a1].CurrentRegion
+    'excel表格数据读入数组arr
+    Set objDoc = WdApp.documents.Open(strPath)
+    '后台打开用户选定的word文档
+    For Each objTable In objDoc.tables
+    '遍历word中的表格
+        x = objTable.Rows.Count
+        y = objTable.Columns.Count
+        For j = 1 To y
+        '遍历表格的标题行，默认标题处于第一行
+            If Application.Clean(objTable.Cell(1, j).Range.Text) = arr(1, j) Then
+            '如果标题行一致，则将excel表数据写入word
+                For i = 2 To x
+                    With objTable.Cell(i, j).Range
+                        .Text = ""
+                        .Text = arr(i, j)
+                    End With
+                Next
+            End If
+        Next
+    Next
+    objDoc.Close True: WdApp.Quit
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+    Set objDoc = Nothing
+    Set WdApp = Nothing
+    MsgBox "处理完成。"
+End Sub
