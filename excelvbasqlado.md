@@ -188,3 +188,144 @@ End Sub
 呵，总结一下：
 
 **对于新手而言**，本章的重点是了解VBA执行SQL的操作过程，以及懂得复制**第4节的**代码执行SQL语句，仅此而已，其它？看过就算，大概过一眼，留个印象，以后再见面好说话也就行了。
+
+## 5.
+
+当引用的数据源在其他地方的时候，需要完整的填入文件所在路径，再通过（.）引用具体的工作簿。例如下例是数据源的位置为`D:\EH小学\学生表.xlsx`该文件中的`成绩表`工作簿
+
+```vbscript
+Sub ADO_SQL()
+    '适用于除2003版以外的高版本Excel
+    Dim cnn As Object, rst As Object
+    Dim strPath As String, strCnn As String, strSQL As String
+    Dim i As Long
+    Set cnn = CreateObject("adodb.connection")
+    strPath = "D:\EH小学\学生表.xlsx" '指定工作簿
+    strCnn = "Provider=Microsoft.ACE.OLEDB.12.0;Extended Properties=Excel 12.0;Data Source=" & strPath
+    cnn.Open strCnn '创建并打开到指定工作簿的链接
+    strSQL = "SELECT * FROM [成绩表$]" 'strSQL语句，查询成绩表的所有数据
+    Set rst = cnn.Execute(strSQL) '执行strSQL
+    Cells.ClearContents
+    For i = 0 To rst.Fields.Count - 1
+        Cells(1, i + 1) = rst.Fields(i).Name
+    Next
+    Range("a2").CopyFromRecordset rst
+    cnn.Close
+    Set cnn = Nothing
+End Sub
+```
+
+但更多的情况是，ADO创建的链接是一个工作簿，需要获取的数据在另一个或多个工作簿，例如跨表格数据查询统计。此时通常使用的代码如下：
+
+```vbscript
+Sub ADO_SQL2()
+    '适用于除2003版以外的高版本Excel
+    Dim cnn As Object, rst As Object
+    Dim strPath As String, strCnn As String, strSQL As String
+    Dim i As Long
+    Set cnn = CreateObject("adodb.connection")
+    strPath = ThisWorkbook.FullName '代码所在工作簿的完整名称
+    strCnn = "Provider=Microsoft.ACE.OLEDB.12.0;Extended Properties=Excel 12.0;Data Source=" & strPath
+    cnn.Open strCnn '创建到代码所在工作簿的链接
+    strSQL = "SELECT * FROM [Excel 12.0;DATABASE=D:\EH小学\学生表.xlsm].[成绩表$]"
+    Set rst = cnn.Execute(strSQL) '执行SQL
+    Cells.ClearContents
+    For i = 0 To rst.Fields.Count - 1
+        Cells(1, i + 1) = rst.Fields(i).Name
+    Next
+    Range("a2").CopyFromRecordset rst
+    cnn.Close
+    Set cnn = Nothing
+End Sub
+```
+
+## 6. 去重 DISTINCT
+
+在数据分析处理过程中，我们经常需要去除查询结果中的重复值，保留截然不同的唯一值。对于SQL，这类问题，我们通常使用DISTINCT关键字处理。
+
+其语法如下：
+
+**SELECT DISTINCT 字段名 FROM 表名**
+
+举个简单栗子。
+
+![img](excelvbasqlado.assets/640.webp)      
+
+如上图所示，Excel工作表的表名为“学生表”，A列是姓名，B列是学科，其中A列的姓名存在重复，比如“看见星光”，现在需要使用SQL语句提取不重复的学生名单。
+
+代码如下：
+
+**SELECT DISTINCT 姓名 FROM [学生表$]**
+
+查询结果如下：
+
+![img](https://mmbiz.qpic.cn/mmbiz_jpg/SbWgux809jVWRdYsiadrAKz5EbvnWHTlPbWM44cMc6b0bkOkkPfibicuUQuiaHzlghU76AzCJRwbrF2XQSz6xtvvdw/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)      
+
+从查询结果可以看出，重复的人名已被剔除；但数据排列顺序也和数据源不同了。
+
+事实上，系统的操作过程是先对查询结果排序，然后从中剔除重复值。
+
+在Excel中，当查询结果是非中文时，比如数字和字母，DISTINCT处理后的结果明显为升序排列。
+
+当查询结果是中文呢？其实中文也是按升序排列的……只是排序规则不是我们平常所熟知的拼音或笔划顺序。
+
+## 7. 排序用法 `SELECT 字段名 FROM 表名 ORDEY BY 字段名 DESC`
+
+如下图所示，工作表名称为“销售表”，A列是月份，B列是产品，C列是生产量，D列是销售量，数据纯属虚拟，如有雷同——实属雷人。
+
+![img](excelvbasqlado.assets/640-1575720800545.webp)
+
+如果我们需要查询该表月份和销售量两个字段的数据，并将销售量作升序排列，代码如下：
+
+`SELECT 月份,销售量 FROM [销售表$] ORDER BY 销售量`
+
+![img](excelvbasqlado.assets/640-1575720800557.webp)
+
+
+如果我们需要查询月份、生产量、销售量三个字段的数据，其中**生产量优先排序**，且降序排列，销售量升序排列，代码如下：
+
+```
+SELECT 月份,生产量,销售量 FROM [销售表$] ORDER BY 生产量 DESC,销售量 ASC
+```
+
+也就是说，ORDER BY语句中，优先排序的字段放在前面，不同字段可以指定不同的排序规则，如果没有指定排序规则，则默认为升序(ASC)排列。代码结果如下：
+
+![img](excelvbasqlado.assets/640-1575720800576.webp)
+
+我们可以用自定义排序规则，也就是使用SQL中的iif或者instr函数。
+
+IF函数类似于工作表的IF函数，语法如下:
+
+```vbscript
+=IIF(条件表达式,真值结果,假值结果)
+```
+
+使用IIF自定义排序规则的SQL语句如下：
+
+```vbscript
+SELECT 月份,销售量 FROM [销售表$] ORDER BY IIF(月份='五月',1,IIF(月份='四月',2,IIF(月份='三月',3,IIF(月份='二月',4,IIF(月份='一月',5)))))
+```
+
+
+
+代码长的吓人？但意思其实很简单。
+
+……如果月份等于五月，就返回1，否则如果月份等于四月，就返回2，再否则如果月份等于三月……以此类推……最后ORDER BY语句按IIF返回的结果进行升序排序……
+
+再说下INSTR函数。
+
+INSTR函数有些类似于工作表函数FIND，查找一个字符串在另一个字符串中的位置，和FIND不同的是，当找不到相关值时，结果返回0，而非错误值。
+
+```vb
+INSTR（str, substr）返回substr在str中的位置，若不存在，则返回0。
+```
+
+使用INSTR函数自定义排序规则的SQL语句如下：
+
+```vb
+SELECT 月份,销售量 FROM [销售表$] ORDER BY INSTR('五月,四月,三月,二月,一月',月份)
+```
+
+INSTR函数的处理语句比起IIF函数来明显要简洁清爽的多。
+
+**——因此我们通常使用该函数处理自定义排序的问题**
