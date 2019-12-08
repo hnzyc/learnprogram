@@ -329,3 +329,165 @@ SELECT 月份,销售量 FROM [销售表$] ORDER BY INSTR('五月,四月,三月,�
 INSTR函数的处理语句比起IIF函数来明显要简洁清爽的多。
 
 **——因此我们通常使用该函数处理自定义排序的问题**
+
+## 8.条件筛选，语法：`**SELECT 字段名 FROM 表名 WHERE 筛选条件**`
+
+如下图所示，是一份名为学生表的Excel工作表，A列是班级，B列是姓名，C-E列分别是性别、年龄、爱好。
+
+![img](excelvbasqlado.assets/640-1575721517265.webp)      
+
+倘若需要查询上述示例中班级为“插班生”的学生名单，SQL代码如下：
+
+`SELECT 班级,姓名 FROM [学生表$] WHERE 班级='插班生'`
+
+班级='插班生'就是where子句的筛选条件，它使用了等号来判断班级字段值和条件值是否相等。需要说明的是，和Excel一样，当条件值是文本时，应该使用半角引号包起来，**而数值则不用**，例如：
+
+`SELECT 班级,姓名 FROM [学生表$] WHERE 年龄>=14`
+
+这个问题我们之前有解释过，这里再说一下。在OLE DB法使用的SQL语句里，单引号和双引号都可以。只是在VBA中，通常SQL语句本身就是作为字符串存在的，外围已经存在了一对双引号，因此SQL语句内一般就使用单引号。
+
+先说一下“与”关系（也就是并且关系）的多条件筛选。
+
+和Excel一样，在SQL中，这类问题通常使用AND运算符。
+
+比如，我们需要查找班级为插班生、同时年龄大于等于12岁的学员名单，SQL代码如下：
+
+`SELECT 班级,姓名,年龄 FROM [学生表$] WHERE 班级='插班生' AND 年龄>=12`
+
+**再说一下“或”关系的多条件筛选，也就是只要符合指定筛选条件中的任一条，结果即OK的where筛选子句。**
+
+在SQL中，这类问题一般使用OR运算符处理。
+
+比如，需要查找班级是插班生**或者**年龄大于等于12岁的学员名单，SQL代码如下：
+
+`SELECT 班级,姓名,年龄 FROM [学生表$] WHERE 班级='插班生'  OR 年龄>=12`
+
+当“或”关系的查询条件较少时，我们使用OR运算符，但当查询条件较多时，OR运算符的书写便变得臃肿烦琐，此时我们可以使用其它运算符，例如BETWEEN和IN。
+
+IN运算符可以指定一个到多个值，每个值之间使用**英文逗号**间隔，最后以括号“()”包括起来。当查询值和括号中的任一值匹配时，则结果即为True。其语法如下：
+
+`Text expression IN (First value,……,last value)`
+
+倘若我们需要查询姓名为：看见星光、老祝、美女空、大红花四个人的班级和爱好数据。
+
+SQL语句如下：
+
+```vb
+SELECT 班级,姓名,爱好 FROM [学生表$] WHERE 姓名 IN('看见星光','老祝','美女空','大红花')
+```
+
+查询结果如下：
+
+![img](excelvbasqlado.assets/640-1575721792953.webp)      
+
+between……and语句可以选取介于两个值范围之间的数据，这些值可以是数值、日期和文本（……尽管如此，中文还是别用，原因你懂得）。
+
+例如我们需要查询年龄在13-16岁之间的学员名单。
+
+SQL代码如下：
+
+```vb
+SELECT 班级,姓名,年龄 FROM [学生表$] WHERE 年龄 BETWEEN 13 AND 16
+```
+
+而反过来，如果我们需要查询年龄**不在**13-16岁之间的学员名单，可以使用NOT运算符搭配between。代码如下：
+
+```vb
+SELECT 班级,姓名,年龄 FROM [学生表$] WHERE 年龄 NOT BETWEEN 13 AND 16
+```
+
+倘若我们需要获取姓名中包含“光”字的学生名单，SQL代码如下：
+
+```vb
+SELECT 姓名 FROM [学生表$] WHERE 姓名 LIKE '%光%'
+```
+
+倘若我们需要获取姓名长度为2个字符的学生名单，SQL代码如下：
+
+```vb
+SELECT 姓名 FROM [学生表$] WHERE 姓名 LIKE '__'
+```
+
+倘若我们需要获取姓名以“美女”开头，同时年龄小于18岁的学生名单，SQL代码如下：
+
+```vb
+SELECT 姓名,年龄 FROM [学生表$] WHERE 姓名 LIKE '美女%' AND 年龄<18
+```
+
+在Excel中，单元格存在星号（*），而我们又需要批量查找或替换星号时，通常使用“~”进行强制转义。
+
+其他的使用[]括起来
+
+举一个对新手而言可能稍微复杂的VBA+ADO+SQL的实例（示例文件文末可下载）。
+
+该实例在工作中是较为常见也较为实用的。
+
+在一个工作簿里，有两个工作表，一个是学生表，一个是查询表。
+
+![img](excelvbasqlado.assets/640-1575791971033.webp)      
+
+上图是学生表，记录了学生信息的明细。
+
+![img](excelvbasqlado.assets/640-1575791971036.webp)      
+
+上图是查询表。第一行是标题栏，有四个字段名，分别是班级、姓名、性别、爱好。
+
+**要求：**
+
+查询表字段名对应的第二行的单元格输入关键值后，点击【查询】按钮，从“学生表”获取符合查询条件的学生信息。
+
+**效果动画示意：**
+
+![img](excelvbasqlado.assets/640.gif)      
+
+**VBA代码如下：**
+
+```vb
+Sub strSQLFindData()   
+    Dim cnn As Object, rst As Object  
+    Dim strPath As String, str_cnn As String, strSQL As String  
+    Dim i As Long, j As Long    
+    Set cnn = CreateObject("adodb.connection")   
+    strPath = ThisWorkbook.FullName   
+    If Application.Version < 12 Then        
+            str_cnn = "Provider=Microsoft.jet.OLEDB.4.0;Extended Properties=Excel 8.0;Data Source=" & strPath    
+    Else        
+            str_cnn = "Provider=Microsoft.ACE.OLEDB.12.0;Extended Properties=Excel 12.0;Data Source=" & strPath    
+    End If   
+    cnn.Open str_cnn    '以上后期绑定ADO并建立当前文件链接    
+    For j = 1 To 4        
+        If Len(Cells(2, j).Value) Then        '当查询关键值不为空时，使用and运算符和like链接在一起            
+            strSQL = strSQL & " AND " & Cells(1, j).Value & " LIKE '%" & Cells(2, j).Value & "%'"        
+        End If    
+    Next    
+    If Len(strSQL) = 0 Then 
+        MsgBox "尚未输入任一查询关键值。": Exit Sub    
+            '当没有输入任何查询关键值时退出程序    
+        strSQL = "SELECT * FROM [学生表$] WHERE " & Mid(strSQL, 5)    
+    Set rst = cnn.Execute(strSQL)    'cnn.Execute()执行strSQL语句    
+    ActiveSheet.UsedRange.Offset(3).ClearContents    
+    For i = 0 To rst.Fields.Count - 1    
+                '遍历记录集中的字段名        
+    	Cells(4, i + 1) = rst.Fields(i).Name    
+    Next    
+    Range("a5").CopyFromRecordset rst    '将记录复制到单元格区域    
+    ActiveSheet.ListObjects.Add xlSrcRange, ActiveSheet.UsedRange.Offset(3), , xlYes    '数据区域转换为【表】    
+    cnn.Close '关闭链接    
+    Set cnn = Nothing '释放内存
+End Sub
+```
+
+**小贴士：**
+
+1），VBA+ADO方法执行SQL语句的最大优势之一，便是VBA对象、变量和循环的使用，它们使SQL语句的组合非常灵活，可以极有层次感的表述复杂的SQL语句。上述示例中，通过遍历单元格对象A1:D2，搭配SQL查询语句中AND和LIKE运算符，用较少的VBA代码完成了多条件的模糊匹配查询，这比VBA自身的INSTR函数要高效的多。
+
+2），没有VBA基础的朋友可以对该实例先飘过。学一下常用的SQL查询语句，按第1章OLE DB法，结合透视表或表功能使用SQL语句，也是极其实用的。
+
+示例文件下载：
+
+https://pan.baidu.com/s/171LL587pzOIgPOl9xTGbVA
+
+提取码: bafw
+
+转存到自己的百度网盘：[https://pan.baidu.com/disk/home#/all?vmode=list&path=%2F%E6%95%99%E7%A8%8B%2FVBA%2BADO%2BSQL](https://pan.baidu.com/disk/home#/all?vmode=list&path=%2F教程%2FVBA%2BADO%2BSQL)
+
