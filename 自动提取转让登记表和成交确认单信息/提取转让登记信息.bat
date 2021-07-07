@@ -1,0 +1,1 @@
+python reg_info.py
