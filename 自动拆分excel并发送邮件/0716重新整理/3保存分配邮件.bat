@@ -1,1 +1,1 @@
-python split.py
+python save_mail.py

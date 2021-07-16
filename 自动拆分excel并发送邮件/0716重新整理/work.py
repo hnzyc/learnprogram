@@ -33,7 +33,7 @@ def save_excel(data,title_data,save_path,title_range):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     title = data[title_range]
-    app = xw.App(visible = True, add_book = False) # 启动Excel程序
+    app = xw.App(visible = False, add_book = False) # 启动Excel程序
     for key,value in data.items(): # 按客户名称遍历分类后的数据
         workbook = app.books.add() # 新建工作簿        
         # if key != title_range:            
