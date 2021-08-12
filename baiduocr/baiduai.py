@@ -1,10 +1,17 @@
 # coding=utf-8
+# 作者：赵运超
+# 2021-08-07
+# 批量修改文件名称
+# 参考来源：https://github.com/Baidu-AIP/QuickStart/blob/master/OCR/main.py
+# 可以实现简单对话框选择路径，也可以使用输入路径方式来实现
 
 import sys
 import json
 import base64
 import os
-import glob
+# import glob
+import tkinter as tk
+from tkinter import filedialog # 图形化对话框
 
 
 # 保证兼容python2以及python3
@@ -101,6 +108,7 @@ def request(url, data):
     except  URLError as err:
         print(err)
 
+
 if __name__ == '__main__':
 
     # 获取access token
@@ -110,32 +118,38 @@ if __name__ == '__main__':
     image_url = OCR_URL + "?access_token=" + token
 
     text = ""
+    # 图形化选择路径
+    # root = tk.Tk()
+    # root.withdraw()
+    # data_dir = filedialog.askdirectory(title = '请选择图片文件夹') + '/'
+    # result_dir = filedialog.askdirectory(title = '请选择输出文件夹') + '/'
+    data_dir = r'D:\learnpython\baiduocr\picture'
+    result_dir = r'D:\learnpython\baiduocr\tmp'
+    
 
-    outfile = './tmp/export.txt'  #输出文件
-    outdir = './tmp'  #临时文件
-    if os.path.exists(outfile):
-        os.remove(outfile)  #如果输出文件已存在，删除
-    if not os.path.exists(outdir):
-        os.mkdir(outdir) #如果输出文件不存在，创建输出文件
-    for picfile in glob.glob("./picture/*"):  #遍历调整后的图片存放的文件夹
-        
+    # if not os.path.exists(result_dir):
+    #     os.mkdir(result_dir) #如果输出文件不存在，创建输出文件
+    num = 0
+    for picfile in os.listdir(data_dir):  #遍历调整后的图片存放的文件夹
+        print('{0}:{1}正在处理'.format(num+1, picfile.split('.')[0]))
+        # print(picfile)
+        text_name = picfile.split('.')[0] + '.txt'
+        outfile = os.path.join(result_dir,text_name)
+        # print(outfile)
     # 读取书籍页面图片
     # file_content = read_file('./picture/3B2E79DE27AE48CF8F731575AAEBC22D.jpg')
-        file_content = read_file(picfile)
-
+        file_content = read_file(os.path.join(data_dir,picfile)) # 需要注意的是，要读取完整路径才可以正常识别
+        # print(file_content)
     # 调用文字识别服务
         result = request(image_url, urlencode({'image': base64.b64encode(file_content)}))
-
+        # print(result)
     # 解析返回结果
         result_json = json.loads(result)
+        # 如果需要将前述多个内容拼接到一个文档，只需要将下述循环升级一档即可
         for words_result in result_json["words_result"]:
-            text = text + words_result["words"]
-    with open(outfile, "w", encoding='utf-8') as f:
-        f.write(str(text))
-        f.close()
-
-    
-
-    
-    
-    
+            text = text + words_result["words"] + '\n'
+        with open(outfile, "w", encoding='utf-8') as f:
+            f.write(str(text))
+            f.close()
+        text = '' #需要清空内容
+        print('{0}:{1}处理完成。'.format(num, text_name))  
